@@ -1,32 +1,41 @@
-import logging
-import argparse
-from typing import Dict, Any
-
-def train(config_path: str):
-    """Main training function"""
-    logging.info(f"Training with config: {config_path}")
-
-def inference(config_path: str, query: str):
-    """Inference function"""
-    logging.info(f"Inferencing query: {query}")
+import os
+from data_processing import PDFProcessor
+from embeddings import EmbeddingGenerator
+from query_processing import QueryProcessor
 
 def main():
-    parser = argparse.ArgumentParser(description="RAG Model")
-    parser.add_argument('--mode', choices=['train', 'inference'], required=True)
-    parser.add_argument('--config', default='configs/config.yaml')
-    parser.add_argument('--query', help='Query for inference')
+    # Get the current directory path
+    current_dir = os.path.dirname(os.path.abspath(__file__))
     
-    args = parser.parse_args()
+    # Construct the PDF file path
+    pdf_path = os.path.join(current_dir, "data.pdf")
     
-    # Configure logging
-    logging.basicConfig(level=logging.INFO)
+    # Initialize PDF Processor
+    pdf_processor = PDFProcessor(num_sentence_chunk_size=10)
     
-    if args.mode == 'train':
-        train(args.config)
-    elif args.mode == 'inference':
-        if not args.query:
-            parser.error("Query is required for inference")
-        inference(args.config, args.query)
+    # Process PDF and get DataFrame
+    df = pdf_processor.process_pdf(pdf_path)
+    
+    
+    embedding_generator = EmbeddingGenerator()
+    embeddings_df = embedding_generator.generate_embeddings(df)
+    embedding_generator.save_embeddings(
+        embeddings_df, 
+        "text_chunks_and_embeddings_df.csv"
+    )
 
-if __name__ == '__main__':
+    query_processor = QueryProcessor(
+        embeddings_path="text_chunks_and_embeddings_df.csv"
+    )
+
+    query = "macronutrients functions"
+    retrieved_contexts = query_processor.process_query(query, k=5)
+
+    print(f"\nQuery: {query}")
+    print("\nTop Retrieved Contexts:")
+    for i, context in enumerate(retrieved_contexts, 1):
+        print(f"\nContext {i} (Similarity: {context['similarity_score']:.4f}):")
+        print(context['text'])
+
+if __name__ == "__main__":
     main()
