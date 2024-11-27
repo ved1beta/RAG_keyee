@@ -35,7 +35,7 @@ class EmbeddingGenerator:
         
         # Save to file based on extension
         if save_path.endswith('.csv'):
-            # For CSV, convert embeddings to JSON string
+            # Convert embeddings to JSON string for CSV storage
             embeddings_df['embedding'] = embeddings_df['embedding'].apply(json.dumps)
             embeddings_df.to_csv(save_path, index=False)
         elif save_path.endswith('.parquet'):
