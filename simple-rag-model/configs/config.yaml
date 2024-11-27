@@ -1,0 +1,16 @@
+# RAG Model Configuration
+
+data:
+  path: 'data/raw'
+  
+model:
+  type: 'transformer'
+  name: 'facebook/bart-base'
+
+retrieval:
+  top_k: 5
+  
+training:
+  epochs: 10
+  batch_size: 16
+  learning_rate: 2e-5
