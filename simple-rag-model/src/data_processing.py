@@ -3,8 +3,8 @@ import re
 import fitz
 from tqdm.auto import tqdm
 import spacy
-import random
 import pandas as pd
+import os
 
 class PDFProcessor:
     def __init__(self, num_sentence_chunk_size=10):
@@ -23,18 +23,28 @@ class PDFProcessor:
         """
         Read PDF and extract text pages.
         """
-        doc = fitz.open(pdf_path)
-        pages_text = []
-        for page_num in tqdm(range(len(doc))):
-            page = doc[page_num]
-            text = page.get_text()
-            text = self.text_formatter(text=text)
-            pages_text.append({
-                "page_num": page_num,
-                "text": text,
-                "pages_token_count": len(text)/4
-            }) 
-        return pages_text
+        # Validate PDF path
+        if not os.path.exists(pdf_path):
+            raise FileNotFoundError(f"PDF file not found at: {pdf_path}")
+            
+        if not pdf_path.lower().endswith('.pdf'):
+            raise ValueError("File must be a PDF")
+            
+        try:
+            doc = fitz.open(pdf_path)
+            pages_text = []
+            for page_num in tqdm(range(len(doc))):
+                page = doc[page_num]
+                text = page.get_text()
+                text = self.text_formatter(text=text)
+                pages_text.append({
+                    "page_num": page_num,
+                    "text": text,
+                    "pages_token_count": len(text)/4
+                }) 
+            return pages_text
+        except Exception as e:
+            raise Exception(f"Error reading PDF: {str(e)}")
 
     def split_list(self, input_list: list, slice_size: int) -> list[list[str]]:
         """
