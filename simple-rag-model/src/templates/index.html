@@ -7,77 +7,69 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
-<body class="bg-gray-100 min-h-screen flex flex-col">
-    <div class="container mx-auto px-4 py-8 flex-grow">
-        <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden flex flex-col md:flex-row">
-            <!-- Sidebar for PDF and Chat History -->
-            <div class="w-full md:w-1/3 bg-gray-100 border-r p-4">
-                <div class="mb-4">
-                    <h2 class="text-xl font-bold mb-3">PDF Upload</h2>
-                    <form id="uploadForm" class="mb-4" enctype="multipart/form-data">
-                        <div class="flex">
-                            <input 
-                                type="file" 
-                                id="pdfFile" 
-                                accept=".pdf" 
-                                class="flex-grow border p-2 rounded-l"
-                            >
-                            <button 
-                                type="submit" 
-                                class="bg-blue-500 text-white px-4 py-2 rounded-r"
-                            >
-                                Upload
-                            </button>
-                        </div>
-                    </form>
-                    <div id="uploadStatus" class="mt-2 text-center"></div>
-                </div>
-
-                <!-- Chat History Section -->
-                <div class="mt-4">
-                    <h2 class="text-xl font-bold mb-3">Chat History</h2>
-                    <div id="chatHistory" class="space-y-2 max-h-96 overflow-y-auto">
-                        <!-- Chat history items will be added here dynamically -->
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
+            <!-- PDF Upload Section -->
+            <div class="p-6 border-b">
+                <h2 class="text-xl font-bold mb-4">Upload PDF</h2>
+                <form id="uploadForm" class="space-y-4">
+                    <div class="flex items-center space-x-4">
+                        <input 
+                            type="file" 
+                            id="pdfFile" 
+                            name="file"
+                            accept=".pdf" 
+                            class="flex-1 p-2 border rounded"
+                        >
+                        <button 
+                            type="submit" 
+                            id="uploadButton"
+                            class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 transition-colors"
+                        >
+                            Upload
+                        </button>
                     </div>
-                </div>
+                    
+                    <!-- Upload Progress -->
+                    <div id="uploadProgress" class="hidden">
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <p id="progressText" class="text-sm text-gray-600 mt-1 text-center">Processing: 0%</p>
+                    </div>
+                    
+                    <!-- Status Messages -->
+                    <div id="uploadStatus" class="text-center"></div>
+                </form>
             </div>
 
-            <!-- Main Chat Interface -->
-            <div class="w-full md:w-2/3 flex flex-col">
-                <!-- Chat Messages Area -->
-                <div 
-                    id="chatMessages" 
-                    class="flex-grow p-4 overflow-y-auto bg-white"
-                    style="max-height: 500px;"
-                >
+            <!-- Chat Interface -->
+            <div class="flex flex-col h-[600px]">
+                <!-- Messages Area -->
+                <div id="chatMessages" class="flex-1 p-4 overflow-y-auto space-y-4">
                     <div id="welcomeMessage" class="text-center text-gray-500 p-4">
-                        <p class="mb-2">👋 Welcome! Upload a PDF to start chatting.</p>
-                        <p class="text-sm">Your PDF will be processed locally for Q&A.</p>
+                        <i class="fas fa-file-pdf text-4xl mb-2"></i>
+                        <p class="text-lg mb-2">Upload a PDF to start chatting</p>
+                        <p class="text-sm">You can ask questions about the document's content</p>
                     </div>
                 </div>
 
-                <!-- Context Display Area -->
-                <div 
-                    id="contextDisplay" 
-                    class="bg-gray-50 p-2 max-h-32 overflow-y-auto text-sm"
-                >
-                    <p class="text-gray-500 text-center">Retrieved contexts will appear here</p>
-                </div>
-
-                <!-- Query Input Area -->
-                <div class="p-4 border-t">
-                    <form id="queryForm" class="flex">
+                <!-- Query Input -->
+                <div class="border-t p-4">
+                    <form id="queryForm" class="flex space-x-2">
                         <input 
                             type="text" 
                             id="queryInput" 
                             placeholder="Ask a question about your PDF..." 
-                            class="flex-grow border p-2 rounded-l focus:outline-none focus:ring-2 focus:ring-blue-300"
-                            autocomplete="off"
+                            class="flex-1 p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-300"
+                            disabled
                         >
                         <button 
                             type="submit" 
-                            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-r transition-colors"
                             id="submitQuery"
+                            class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors disabled:bg-gray-300"
+                            disabled
                         >
                             <i class="fas fa-paper-plane"></i>
                         </button>
@@ -88,123 +80,40 @@
     </div>
 
     <script>
-        // State management
-        const state = {
-            currentPDF: null,
-            chatHistory: [],
-            maxChatHistoryItems: 10
-        };
-
         // DOM Elements
         const elements = {
             uploadForm: document.getElementById('uploadForm'),
+            uploadButton: document.getElementById('uploadButton'),
             pdfFile: document.getElementById('pdfFile'),
             uploadStatus: document.getElementById('uploadStatus'),
+            uploadProgress: document.getElementById('uploadProgress'),
+            progressBar: document.getElementById('progressBar'),
+            progressText: document.getElementById('progressText'),
             chatMessages: document.getElementById('chatMessages'),
-            contextDisplay: document.getElementById('contextDisplay'),
             queryForm: document.getElementById('queryForm'),
             queryInput: document.getElementById('queryInput'),
             submitQuery: document.getElementById('submitQuery'),
-            chatHistory: document.getElementById('chatHistory'),
             welcomeMessage: document.getElementById('welcomeMessage')
         };
 
-        // Utility Functions
-        function truncateText(text, maxLength = 50) {
-            return text.length > maxLength 
-                ? text.substring(0, maxLength) + '...' 
-                : text;
-        }
-
-        function addToChatHistory(query) {
-            // Add to chat history state
-            state.chatHistory.unshift({
-                query: truncateText(query),
-                timestamp: new Date().toLocaleTimeString()
-            });
-
-            // Limit chat history
-            if (state.chatHistory.length > state.maxChatHistoryItems) {
-                state.chatHistory.pop();
-            }
-
-            // Render chat history
-            elements.chatHistory.innerHTML = state.chatHistory.map(item => `
-                <div class="bg-gray-200 p-2 rounded text-sm">
-                    <p class="font-medium">${item.query}</p>
-                    <p class="text-xs text-gray-600">${item.timestamp}</p>
-                </div>
-            `).join('');
-        }
-
-        function displayMessage(sender, message, type = 'normal') {
-            // Remove welcome message if it exists
-            if (elements.welcomeMessage) {
-                elements.welcomeMessage.remove();
-            }
-
-            const messageClass = {
-                normal: 'bg-white',
-                user: 'bg-blue-100',
-                ai: 'bg-green-100',
-                error: 'bg-red-100'
-            }[type];
-
-            const messageIcon = {
-                user: '<i class="fas fa-user mr-2"></i>',
-                ai: '<i class="fas fa-robot mr-2"></i>',
-                error: '<i class="fas fa-exclamation-triangle mr-2"></i>'
-            }[sender];
-
-            elements.chatMessages.innerHTML += `
-                <div class="p-3 rounded my-2 ${messageClass} shadow-sm">
-                    <div class="flex items-start">
-                        ${messageIcon || ''}
-                        <div class="flex-grow">
-                            <strong class="block mb-1">${sender === 'user' ? 'You' : 'AI Assistant'}</strong>
-                            ${message}
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Auto-scroll to bottom
-            elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
-        }
-
-        function displayContexts(contexts) {
-            if (!contexts || contexts.length === 0) {
-                elements.contextDisplay.innerHTML = `
-                    <p class="text-gray-500 text-center">No relevant contexts found</p>
-                `;
-                return;
-            }
-
-            elements.contextDisplay.innerHTML = contexts.map((context, index) => `
-                <div class="bg-gray-100 p-2 rounded mb-1">
-                    <p class="text-xs font-bold">Context ${index + 1} (Similarity: ${context.similarity_score.toFixed(4)})</p>
-                    <p class="text-xs">${truncateText(context.text, 200)}</p>
-                </div>
-            `).join('');
-        }
-
-        // Event Listeners
+        // Upload Handler
         elements.uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const fileInput = elements.pdfFile;
-            const uploadStatus = elements.uploadStatus;
-            
-            if (!fileInput.files.length) {
-                uploadStatus.innerHTML = '<p class="text-red-500">Please select a PDF file</p>';
+            if (!elements.pdfFile.files.length) {
+                showStatus('Please select a PDF file', 'error');
                 return;
             }
             
             const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
+            formData.append('file', elements.pdfFile.files[0]);
             
             try {
-                uploadStatus.innerHTML = '<p class="text-blue-500">Uploading and processing...</p>';
+                // Start upload
+                showUploadProgress(true);
+                elements.uploadButton.disabled = true;
+                showStatus('Uploading and processing PDF...', 'info');
+                
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData
@@ -213,57 +122,31 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    state.currentPDF = result.filename;
-                    uploadStatus.innerHTML = `
-                        <p class="text-green-500">
-                            <i class="fas fa-check-circle mr-2"></i>${result.message}
-                        </p>
-                    `;
-                    
-                    // Clear previous chat and welcome message
-                    elements.chatMessages.innerHTML = '';
-                    displayMessage('ai', 'PDF uploaded successfully! You can now ask questions about the document.');
+                    showStatus('PDF processed successfully!', 'success');
+                    enableChat();
+                    elements.welcomeMessage.remove();
                 } else {
-                    uploadStatus.innerHTML = `
-                        <p class="text-red-500">
-                            <i class="fas fa-times-circle mr-2"></i>${result.error}
-                        </p>
-                    `;
+                    showStatus(result.error, 'error');
                 }
             } catch (error) {
-                uploadStatus.innerHTML = `
-                    <p class="text-red-500">
-                        <i class="fas fa-exclamation-triangle mr-2"></i>Error: ${error.message}
-                    </p>
-                `;
+                showStatus(`Error: ${error.message}`, 'error');
+            } finally {
+                showUploadProgress(false);
+                elements.uploadButton.disabled = false;
             }
         });
 
+        // Query Handler
         elements.queryForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const queryInput = elements.queryInput;
-            const query = queryInput.value.trim();
-            
-            // Validate PDF upload and query
-            if (!state.currentPDF) {
-                displayMessage('ai', 'Please upload a PDF first.', 'error');
-                return;
-            }
-            
+            const query = elements.queryInput.value.trim();
             if (!query) return;
             
-            // Disable submit during processing
-            elements.submitQuery.disabled = true;
-            elements.submitQuery.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            
-            // Display user message
-            displayMessage('user', query);
-            
-            // Add to chat history
-            addToChatHistory(query);
-            
             try {
+                elements.submitQuery.disabled = true;
+                addMessage('user', query);
+                
                 const response = await fetch('/query', {
                     method: 'POST',
                     headers: {
@@ -275,25 +158,71 @@
                 const result = await response.json();
                 
                 if (response.ok) {
-                    // Display AI response
-                    displayMessage('ai', result.response);
-                    
-                    // Display retrieved contexts
-                    displayContexts(result.contexts);
+                    addMessage('ai', result.response);
                 } else {
-                    displayMessage('ai', result.error, 'error');
+                    addMessage('error', result.error);
                 }
                 
-                // Clear input
-                queryInput.value = '';
+                elements.queryInput.value = '';
             } catch (error) {
-                displayMessage('ai', `Network error: ${error.message}`, 'error');
+                addMessage('error', `Error: ${error.message}`);
             } finally {
-                // Re-enable submit
                 elements.submitQuery.disabled = false;
-                elements.submitQuery.innerHTML = '<i class="fas fa-paper-plane"></i>';
             }
         });
+
+        // Utility Functions
+        function showStatus(message, type = 'info') {
+            const colors = {
+                error: 'text-red-500',
+                success: 'text-green-500',
+                info: 'text-blue-500'
+            };
+            
+            elements.uploadStatus.innerHTML = `
+                <p class="${colors[type]} font-medium">
+                    <i class="fas fa-${type === 'error' ? 'exclamation-circle' : 
+                                    type === 'success' ? 'check-circle' : 
+                                    'info-circle'} mr-2"></i>
+                    ${message}
+                </p>
+            `;
+        }
+
+        function showUploadProgress(show) {
+            elements.uploadProgress.classList.toggle('hidden', !show);
+            if (show) {
+                elements.progressBar.style.width = '0%';
+                elements.progressText.textContent = 'Processing: 0%';
+            }
+        }
+
+        function enableChat() {
+            elements.queryInput.disabled = false;
+            elements.submitQuery.disabled = false;
+            elements.queryInput.placeholder = 'Ask a question about your PDF...';
+        }
+
+        function addMessage(sender, message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `p-4 rounded-lg ${
+                sender === 'user' ? 'bg-blue-100 ml-auto' : 
+                sender === 'error' ? 'bg-red-100' : 
+                'bg-gray-100'
+            } max-w-[80%] ${sender === 'user' ? 'ml-auto' : 'mr-auto'}`;
+            
+            messageDiv.innerHTML = `
+                <p class="font-medium mb-1">${
+                    sender === 'user' ? 'You' : 
+                    sender === 'error' ? 'Error' : 
+                    'AI Assistant'
+                }</p>
+                <p>${message}</p>
+            `;
+            
+            elements.chatMessages.appendChild(messageDiv);
+            elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+        }
     </script>
 </body>
 </html>
