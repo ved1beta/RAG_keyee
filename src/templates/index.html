@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Chat Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Thinking Animation */
+        .thinking-dots {
+            display: inline-flex;
+            gap: 4px;
+            margin: 10px;
+        }
+        
+        .thinking-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #3b82f6;
+            border-radius: 50%;
+            animation: thinking 1s infinite;
+        }
+        
+        .thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+        .thinking-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes thinking {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        /* Processing Animation */
+        .processing-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .processing-box {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Processing Overlay -->
+    <div id="processingOverlay" class="processing-overlay hidden">
+        <div class="processing-box">
+            <div class="thinking-dots">
+                <div class="thinking-dot"></div>
+                <div class="thinking-dot"></div>
+                <div class="thinking-dot"></div>
+            </div>
+            <p class="text-lg font-semibold" id="processingText">Processing PDF...</p>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-4 max-w-4xl">
+        <!-- Upload Section -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4">Upload PDF</h2>
+            <form id="uploadForm" class="space-y-4">
+                <div class="flex gap-4">
+                    <input type="file" 
+                           id="pdfFile" 
+                           accept=".pdf" 
+                           class="flex-1 border p-2 rounded">
+                    <button type="submit" 
+                            class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
+                        Upload
+                    </button>
+                </div>
+                <div id="uploadStatus" class="text-center"></div>
+            </form>
+        </div>
+
+        <!-- Chat Section -->
+        <div class="bg-white rounded-lg shadow">
+            <div id="chatMessages" class="h-[500px] overflow-y-auto p-4 space-y-4">
+                <div class="text-center text-gray-500">
+                    Upload a PDF to start chatting
+                </div>
+            </div>
+            
+            <!-- Query Input -->
+            <div class="border-t p-4">
+                <form id="queryForm" class="flex gap-2">
+                    <input type="text" 
+                           id="queryInput" 
+                           placeholder="Ask a question..." 
+                           class="flex-1 border p-2 rounded"
+                           disabled>
+                    <button type="submit" 
+                            id="submitButton"
+                            class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300"
+                            disabled>
+                        Send
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const elements = {
+            uploadForm: document.getElementById('uploadForm'),
+            queryForm: document.getElementById('queryForm'),
+            queryInput: document.getElementById('queryInput'),
+            submitButton: document.getElementById('submitButton'),
+            chatMessages: document.getElementById('chatMessages'),
+            uploadStatus: document.getElementById('uploadStatus'),
+            processingOverlay: document.getElementById('processingOverlay'),
+            processingText: document.getElementById('processingText')
+        };
+
+        function showProcessing(show, text = 'Processing PDF...') {
+            elements.processingOverlay.classList.toggle('hidden', !show);
+            elements.processingText.textContent = text;
+        }
+
+        function addMessage(type, content) {
+            const div = document.createElement('div');
+            div.className = `p-4 rounded ${
+                type === 'user' ? 'bg-blue-100 ml-auto' : 
+                type === 'ai' ? 'bg-gray-100' : 
+                'bg-red-100'
+            } max-w-[80%]`;
+            div.textContent = content;
+            elements.chatMessages.appendChild(div);
+            elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+        }
+
+        function addThinkingAnimation() {
+            const div = document.createElement('div');
+            div.className = 'thinking-message p-4 bg-gray-100 rounded max-w-[80%]';
+            div.innerHTML = `
+                <div class="thinking-dots">
+                    <div class="thinking-dot"></div>
+                    <div class="thinking-dot"></div>
+                    <div class="thinking-dot"></div>
+                </div>
+            `;
+            elements.chatMessages.appendChild(div);
+            elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+            return div;
+        }
+
+        elements.uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const fileInput = e.target.querySelector('input[type="file"]');
+            if (!fileInput.files.length) return;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                showProcessing(true, 'Processing PDF...');
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    elements.uploadStatus.innerHTML = '<p class="text-green-500">PDF processed successfully!</p>';
+                    elements.queryInput.disabled = false;
+                    elements.submitButton.disabled = false;
+                } else {
+                    elements.uploadStatus.innerHTML = `<p class="text-red-500">Error: ${result.error}</p>`;
+                }
+            } catch (error) {
+                elements.uploadStatus.innerHTML = `<p class="text-red-500">Error: ${error.message}</p>`;
+            } finally {
+                showProcessing(false);
+            }
+        });
+
+        elements.queryForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const query = elements.queryInput.value.trim();
+            if (!query) return;
+
+            elements.submitButton.disabled = true;
+            addMessage('user', query);
+            const thinkingAnim = addThinkingAnimation();
+
+            try {
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                const result = await response.json();
+                thinkingAnim.remove();
+                
+                if (response.ok) {
+                    addMessage('ai', result.response);
+                } else {
+                    addMessage('error', result.error);
+                }
+            } catch (error) {
+                thinkingAnim.remove();
+                addMessage('error', `Error: ${error.message}`);
+            } finally {
+                elements.queryInput.value = '';
+                elements.submitButton.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
