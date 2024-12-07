@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RAG Chat Interface</title>
+    <title>RAG Research Assistant</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* Thinking Animation */
+        /* Existing animations */
         .thinking-dots {
             display: inline-flex;
             gap: 4px;
@@ -29,7 +30,6 @@
             50% { transform: translateY(-10px); }
         }
         
-        /* Processing Animation */
         .processing-overlay {
             position: fixed;
             top: 0;
@@ -49,9 +49,35 @@
             border-radius: 10px;
             text-align: center;
         }
+
+        .social-links a {
+            transition: all 0.3s ease;
+        }
+
+        .social-links a:hover {
+            transform: translateY(-2px);
+        }
     </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-50">
+    <!-- Header with Social Links -->
+    <header class="bg-white shadow-sm">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-robot text-blue-500 text-2xl"></i>
+                <h1 class="text-xl font-bold text-gray-800">RAG Model for Research Paper Summarizing</h1>
+            </div>
+            <div class="social-links flex space-x-4">
+                <a href="https://github.com/yourusername" target="_blank" class="text-gray-600 hover:text-gray-900">
+                    <i class="fab fa-github text-xl"></i>
+                </a>
+                <a href="https://twitter.com/yourusername" target="_blank" class="text-gray-600 hover:text-blue-400">
+                    <i class="fab fa-twitter text-xl"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
     <!-- Processing Overlay -->
     <div id="processingOverlay" class="processing-overlay hidden">
         <div class="processing-box">
@@ -64,18 +90,22 @@
         </div>
     </div>
 
-    <div class="container mx-auto p-4 max-w-4xl">
+    <main class="container mx-auto p-4 max-w-4xl">
         <!-- Upload Section -->
-        <div class="bg-white rounded-lg shadow p-6 mb-6">
-            <h2 class="text-xl font-bold mb-4">Upload PDF</h2>
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6 transition-all hover:shadow-lg">
+            <div class="flex items-center mb-4">
+                <i class="fas fa-file-pdf text-blue-500 mr-2"></i>
+                <h2 class="text-xl font-bold text-gray-800">Upload Research Paper</h2>
+            </div>
             <form id="uploadForm" class="space-y-4">
                 <div class="flex gap-4">
                     <input type="file" 
                            id="pdfFile" 
                            accept=".pdf" 
-                           class="flex-1 border p-2 rounded">
+                           class="flex-1 border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-500">
                     <button type="submit" 
-                            class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
+                            class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center">
+                        <i class="fas fa-upload mr-2"></i>
                         Upload
                     </button>
                 </div>
@@ -84,10 +114,12 @@
         </div>
 
         <!-- Chat Section -->
-        <div class="bg-white rounded-lg shadow">
+        <div class="bg-white rounded-lg shadow-md transition-all hover:shadow-lg">
             <div id="chatMessages" class="h-[500px] overflow-y-auto p-4 space-y-4">
-                <div class="text-center text-gray-500">
-                    Upload a PDF to start chatting
+                <div class="text-center text-gray-500 flex flex-col items-center">
+                    <i class="fas fa-robot text-6xl text-blue-200 mb-4"></i>
+                    <p class="text-lg">Upload a research paper to start chatting</p>
+                    <p class="text-sm text-gray-400">I'll help you understand and summarize it</p>
                 </div>
             </div>
             
@@ -96,20 +128,27 @@
                 <form id="queryForm" class="flex gap-2">
                     <input type="text" 
                            id="queryInput" 
-                           placeholder="Ask a question..." 
-                           class="flex-1 border p-2 rounded"
+                           placeholder="Ask a question about the paper..." 
+                           class="flex-1 border border-gray-300 p-2 rounded-lg focus:ring-2 focus:ring-blue-300 focus:border-blue-500"
                            disabled>
                     <button type="submit" 
                             id="submitButton"
-                            class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300"
+                            class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center"
                             disabled>
+                        <i class="fas fa-paper-plane mr-2"></i>
                         Send
                     </button>
                 </form>
             </div>
         </div>
-    </div>
+    </main>
 
+    <!-- Footer -->
+    <footer class="mt-8 text-center text-gray-500 text-sm pb-4">
+        <p>Built with ❤️ using RAG Technology</p>
+    </footer>
+
+    <!-- Rest of your existing script -->
     <script>
         const elements = {
             uploadForm: document.getElementById('uploadForm'),
