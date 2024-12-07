@@ -2,7 +2,7 @@
 
 A Retrieval-Augmented Generation (RAG) system that helps users understand and analyze research papers. Upload a PDF of a research paper and ask questions about its content.
 
-![RAG Model Demo](demo.gif)
+![RAG Model Demo](demogif.gif)
 
 ## Features
 
