@@ -1,2 +1,27 @@
-flask
-fitz
+# Core dependencies
+streamlit>=1.28.0
+PyMuPDF>=1.23.0  # for PDF processing (fitz)
+werkzeug>=2.3.0  # for secure_filename utility
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+spacy>=3.7.2
+
+# Embeddings and ML
+scikit-learn>=1.3.0
+sentence-transformers>=2.2.0  # for text embeddings
+torch>=2.0.0  # required by sentence-transformers
+
+# NLP
+nltk>=3.8.1
+transformers>=4.35.0  # for response generation
+langchain>=0.0.300  # optional: if using for response generation
+
+# Utils
+python-dotenv>=1.0.0  # for environment variables
+tqdm>=4.66.0  # for progress bars
+uuid>=1.30  # for generating unique identifiers
+
+# Optional but recommended
+watchdog>=3.0.0  # for better streamlit file handling

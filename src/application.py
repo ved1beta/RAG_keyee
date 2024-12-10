@@ -1,7 +1,6 @@
 import os
 import uuid
-from flask import Flask, render_template, request, jsonify
-from flask_cors import CORS
+import streamlit as st
 from werkzeug.utils import secure_filename
 
 # Import RAG components
@@ -10,37 +9,22 @@ from embeddings import EmbeddingGenerator
 from query import QueryProcessor
 from response_generator import ResponseGenerator
 
-# Initialize Flask app with correct template folder
+# Setup directories
 current_dir = os.path.dirname(os.path.abspath(__file__))
-template_dir = os.path.join(current_dir, 'templates')
 upload_dir = os.path.join(current_dir, 'uploads')
 
-app = Flask(__name__, template_folder=template_dir)
-CORS(app)
-
-# Configure upload folder
-ALLOWED_EXTENSIONS = {'pdf'}
-app.config['UPLOAD_FOLDER'] = upload_dir
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-
 # Create necessary directories
-os.makedirs(template_dir, exist_ok=True)
 os.makedirs(upload_dir, exist_ok=True)
 
-# Global variables
-current_pdf_path = None
-pdf_processor = None
-embedding_generator = None
-query_processor = None
-response_generator = None
+# Constants
+ALLOWED_EXTENSIONS = {'pdf'}
+MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB max file size
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def initialize_rag_components(pdf_path):
     """Initialize RAG components for the uploaded PDF"""
-    global pdf_processor, embedding_generator, query_processor, response_generator, current_pdf_path
-    
     try:
         # Generate unique embeddings file name
         embeddings_file = os.path.join(os.path.dirname(pdf_path), f"embeddings_{uuid.uuid4()}.csv")
@@ -50,9 +34,10 @@ def initialize_rag_components(pdf_path):
         embedding_generator = EmbeddingGenerator()
         
         # Process PDF and generate embeddings
-        print(f"Processing PDF: {pdf_path}")
+        st.info("Processing PDF...")
         df = pdf_processor.process_pdf(pdf_path)
-        print("Generating embeddings...")
+        
+        st.info("Generating embeddings...")
         embeddings_df = embedding_generator.generate_embeddings(df)
         embedding_generator.save_embeddings(embeddings_df, embeddings_file)
         
@@ -66,104 +51,84 @@ def initialize_rag_components(pdf_path):
         # Initialize response generator
         response_generator = ResponseGenerator()
         
-        # Update current PDF path
-        current_pdf_path = pdf_path
-        print("RAG components initialized successfully")
+        st.success("PDF processed successfully!")
+        return pdf_processor, embedding_generator, query_processor, response_generator
         
     except Exception as e:
-        print(f"Error initializing RAG components: {str(e)}")
+        st.error(f"Error initializing RAG components: {str(e)}")
         raise
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/upload', methods=['POST'])
-def upload_pdf():
-    try:
-        if 'file' not in request.files:
-            return jsonify({"error": "No file part"}), 400
+def main():
+    st.title("PDF Question Answering System")
+    
+    # Initialize session state
+    if 'rag_components' not in st.session_state:
+        st.session_state.rag_components = None
+    
+    # File upload section
+    uploaded_file = st.file_uploader("Upload a PDF file", type=['pdf'])
+    
+    if uploaded_file is not None:
+        try:
+            # Check file size
+            file_size = len(uploaded_file.getvalue())
+            if file_size > MAX_FILE_SIZE:
+                st.error("File size exceeds the 16MB limit")
+                return
+            
+            # Generate unique filename and save
+            filename = secure_filename(f"{uuid.uuid4()}_{uploaded_file.name}")
+            filepath = os.path.join(upload_dir, filename)
+            
+            with open(filepath, "wb") as f:
+                f.write(uploaded_file.getvalue())
+            
+            # Initialize RAG components
+            st.session_state.rag_components = initialize_rag_components(filepath)
+            
+        except Exception as e:
+            st.error(f"Error processing PDF: {str(e)}")
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            return
+    
+    # Query section
+    if st.session_state.rag_components:
+        query = st.text_input("Enter your question about the PDF:")
         
-        file = request.files['file']
-        if file.filename == '':
-            return jsonify({"error": "No selected file"}), 400
-        
-        if file and allowed_file(file.filename):
+        if query:
             try:
-                # Generate unique filename
-                filename = secure_filename(f"{uuid.uuid4()}_{file.filename}")
-                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                _, _, query_processor, response_generator = st.session_state.rag_components
                 
-                # Save the file
-                print(f"Saving file to: {filepath}")
-                file.save(filepath)
+                # Get relevant contexts
+                contexts = query_processor.process_query(query, k=3)
                 
-                # Initialize RAG components
-                print("Initializing RAG components...")
-                initialize_rag_components(filepath)
+                # Extract text from contexts
+                context_texts = []
+                for ctx in contexts:
+                    if 'text' in ctx:
+                        context_texts.append(ctx['text'])
+                    elif 'sentence_chunk' in ctx:
+                        context_texts.append(ctx['sentence_chunk'])
                 
-                return jsonify({
-                    "message": "PDF uploaded and processed successfully",
-                    "filename": filename
-                }), 200
+                # Generate response
+                response = response_generator.get_answer(query, context_texts)
+                
+                # Display results
+                st.write("### Answer:")
+                st.write(response)
+                
+                # Display contexts in an expander
+                with st.expander("View relevant contexts"):
+                    for i, context in enumerate(contexts, 1):
+                        st.write(f"Context {i}:")
+                        st.write(context)
                 
             except Exception as e:
-                print(f"Error during processing: {str(e)}")
-                # Clean up the file if it was saved
-                if os.path.exists(filepath):
-                    os.remove(filepath)
-                return jsonify({"error": f"Error processing PDF: {str(e)}"}), 500
-        
-        return jsonify({"error": "File type not allowed"}), 400
-        
-    except Exception as e:
-        print(f"Upload error: {str(e)}")
-        return jsonify({"error": f"Upload error: {str(e)}"}), 500
-
-@app.route('/query', methods=['POST'])
-def process_query():
-    try:
-        if not query_processor or not response_generator:
-            return jsonify({"error": "Please upload a PDF first"}), 400
-        
-        data = request.json
-        if not data or 'query' not in data:
-            return jsonify({"error": "No query provided"}), 400
-        
-        query = data['query']
-        print(f"Processing query: {query}")
-        
-        # Get relevant contexts
-        contexts = query_processor.process_query(query, k=3)
-        
-        # Extract text from contexts and format properly
-        context_texts = []
-        for ctx in contexts:
-            if 'text' in ctx:
-                context_texts.append(ctx['text'])
-            elif 'sentence_chunk' in ctx:
-                context_texts.append(ctx['sentence_chunk'])
-        
-        # Generate response using contexts
-        response = response_generator.get_answer(query, context_texts)
-        
-        return jsonify({
-            "query": query,
-            "response": response,
-            "contexts": contexts
-        }), 200
-        
-    except Exception as e:
-        print(f"Error processing query: {str(e)}")
-        return jsonify({"error": f"Error processing query: {str(e)}"}), 500
+                st.error(f"Error processing query: {str(e)}")
+    
+    else:
+        st.info("Please upload a PDF to start asking questions.")
 
 if __name__ == '__main__':
-    print(f"Template folder: {template_dir}")
-    print(f"Upload folder: {upload_dir}")
-    
-    # Verify template exists
-    template_path = os.path.join(template_dir, 'index.html')
-    if not os.path.exists(template_path):
-        raise FileNotFoundError(f"Template not found at: {template_path}")
-        
-    app.run(debug=True, port=5000)
+    main()
