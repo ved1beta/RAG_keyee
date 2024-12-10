@@ -1,27 +1,12 @@
 import os
-import uuid
 import streamlit as st
-from werkzeug.utils import secure_filename
+import uuid
 
-# Import RAG components
+# Import your existing RAG components
 from data_processing import PDFProcessor
 from embeddings import EmbeddingGenerator
 from query import QueryProcessor
 from response_generator import ResponseGenerator
-
-# Setup directories
-current_dir = os.path.dirname(os.path.abspath(__file__))
-upload_dir = os.path.join(current_dir, 'uploads')
-
-# Create necessary directories
-os.makedirs(upload_dir, exist_ok=True)
-
-# Constants
-ALLOWED_EXTENSIONS = {'pdf'}
-MAX_FILE_SIZE = 16 * 1024 * 1024  # 16MB max file size
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def initialize_rag_components(pdf_path):
     """Initialize RAG components for the uploaded PDF"""
@@ -34,9 +19,8 @@ def initialize_rag_components(pdf_path):
         embedding_generator = EmbeddingGenerator()
         
         # Process PDF and generate embeddings
-        st.info("Processing PDF...")
+        st.info(f"Processing PDF: {pdf_path}")
         df = pdf_processor.process_pdf(pdf_path)
-        
         st.info("Generating embeddings...")
         embeddings_df = embedding_generator.generate_embeddings(df)
         embedding_generator.save_embeddings(embeddings_df, embeddings_file)
@@ -51,84 +35,70 @@ def initialize_rag_components(pdf_path):
         # Initialize response generator
         response_generator = ResponseGenerator()
         
-        st.success("PDF processed successfully!")
         return pdf_processor, embedding_generator, query_processor, response_generator
-        
+    
     except Exception as e:
         st.error(f"Error initializing RAG components: {str(e)}")
-        raise
+        return None, None, None, None
 
 def main():
-    st.title("RAG pdf summarizer")
-    
-    # Initialize session state
-    if 'rag_components' not in st.session_state:
-        st.session_state.rag_components = None
-    
-    # File upload section
-    uploaded_file = st.file_uploader("Upload a PDF file", type=['pdf'])
-    
-    if uploaded_file is not None:
-        try:
-            # Check file size
-            file_size = len(uploaded_file.getvalue())
-            if file_size > MAX_FILE_SIZE:
-                st.error("File size exceeds the 16MB limit")
-                return
-            
-            # Generate unique filename and save
-            filename = secure_filename(f"{uuid.uuid4()}_{uploaded_file.name}")
-            filepath = os.path.join(upload_dir, filename)
-            
-            with open(filepath, "wb") as f:
-                f.write(uploaded_file.getvalue())
-            
-            # Initialize RAG components
-            st.session_state.rag_components = initialize_rag_components(filepath)
-            
-        except Exception as e:
-            st.error(f"Error processing PDF: {str(e)}")
-            if os.path.exists(filepath):
-                os.remove(filepath)
-            return
-    
-    # Query section
-    if st.session_state.rag_components:
-        query = st.text_input("Enter your question about the PDF:")
-        
-        if query:
-            try:
-                _, _, query_processor, response_generator = st.session_state.rag_components
-                
-                # Get relevant contexts
-                contexts = query_processor.process_query(query, k=3)
-                
-                # Extract text from contexts
-                context_texts = []
-                for ctx in contexts:
-                    if 'text' in ctx:
-                        context_texts.append(ctx['text'])
-                    elif 'sentence_chunk' in ctx:
-                        context_texts.append(ctx['sentence_chunk'])
-                
-                # Generate response
-                response = response_generator.get_answer(query, context_texts)
-                
-                # Display results
-                st.write("### Answer:")
-                st.write(response)
-                
-                # Display contexts in an expander
-                with st.expander("View relevant contexts"):
-                    for i, context in enumerate(contexts, 1):
-                        st.write(f"Context {i}:")
-                        st.write(context)
-                
-            except Exception as e:
-                st.error(f"Error processing query: {str(e)}")
-    
-    else:
-        st.info("Please upload a PDF to start asking questions.")
+    st.title("PDF Question Answering Assistant")
 
-if __name__ == '__main__':
+    # Sidebar for PDF upload
+    st.sidebar.header("Upload PDF")
+    uploaded_file = st.sidebar.file_uploader("Choose a PDF file", type="pdf")
+
+    # Initialize session state variables
+    if 'pdf_processor' not in st.session_state:
+        st.session_state.pdf_processor = None
+        st.session_state.embedding_generator = None
+        st.session_state.query_processor = None
+        st.session_state.response_generator = None
+
+    # PDF Upload and Processing
+    if uploaded_file is not None:
+        # Create a temporary file
+        temp_pdf_path = os.path.join("uploads", f"{uuid.uuid4()}_{uploaded_file.name}")
+        os.makedirs("uploads", exist_ok=True)
+        
+        # Save uploaded file
+        with open(temp_pdf_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        
+        # Initialize RAG components
+        pdf_processor, embedding_generator, query_processor, response_generator = initialize_rag_components(temp_pdf_path)
+        
+        # Store in session state
+        st.session_state.pdf_processor = pdf_processor
+        st.session_state.embedding_generator = embedding_generator
+        st.session_state.query_processor = query_processor
+        st.session_state.response_generator = response_generator
+        
+        st.sidebar.success("PDF processed successfully!")
+
+    # Query Section
+    st.header("Ask a Question")
+    query = st.text_input("Enter your question about the PDF")
+
+    if query and st.session_state.query_processor and st.session_state.response_generator:
+        with st.spinner("Generating answer..."):
+            # Get relevant contexts
+            contexts = st.session_state.query_processor.process_query(query, k=3)
+            
+            # Extract text from contexts
+            context_texts = [ctx.get('text', ctx.get('sentence_chunk', '')) for ctx in contexts]
+            
+            # Generate response
+            response = st.session_state.response_generator.get_answer(query, context_texts)
+            
+            # Display response
+            st.subheader("Answer")
+            st.write(response)
+            
+            # Optional: Show context details
+            with st.expander("Context Details"):
+                for i, context in enumerate(contexts, 1):
+                    st.text(f"Context {i}: {context.get('text', context.get('sentence_chunk', 'No text available'))}")
+
+if __name__ == "__main__":
     main()
