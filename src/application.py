@@ -59,7 +59,7 @@ def initialize_rag_components(pdf_path):
         raise
 
 def main():
-    st.title("PDF Question Answering System")
+    st.title("RAG pdf summarizer")
     
     # Initialize session state
     if 'rag_components' not in st.session_state:

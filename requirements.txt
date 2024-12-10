@@ -24,4 +24,5 @@ tqdm>=4.66.0  # for progress bars
 uuid>=1.30  # for generating unique identifiers
 
 # Optional but recommended
+PyPDF2
 watchdog>=3.0.0  # for better streamlit file handling
