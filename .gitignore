@@ -163,3 +163,4 @@ cython_debug/
 rag_env/*
 date.pdf
 src/uploads/*
+simple/*
