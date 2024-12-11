@@ -14,7 +14,7 @@ class QueryProcessor:
                  min_score_threshold=0.1):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         
-        # Load embeddings and chunks
+ 
         self.text_chunks_and_embedding_df = self._load_embeddings(embeddings_path)
         print(f"Loaded {len(self.text_chunks_and_embedding_df)} text chunks")
         
@@ -26,13 +26,12 @@ class QueryProcessor:
         
         print(f"Embeddings shape: {self.embeddings.shape}")
         
-        # Initialize embedding model
         self.embedding_model = SentenceTransformer(
             model_name_or_path=model_name, 
             device=self.device
         )
         
-        # Initialize retriever
+       
         self.retriever = SemanticRetriever(
             embeddings=self.embeddings,
             chunks_data=self.pages_and_chunks,
@@ -53,10 +52,9 @@ class QueryProcessor:
     def process_query(self, query, k=5):
         """Process a query and return relevant contexts"""
         try:
-            # Encode query
+          
             query_embedding = self.encode_query(query)
             
-            # Retrieve contexts using the retriever
             retrieved_contexts = self.retriever.retrieve(
                 query_embedding=query_embedding,
                 top_k=k
