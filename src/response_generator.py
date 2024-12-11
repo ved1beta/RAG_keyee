@@ -21,18 +21,15 @@ class ResponseGenerator:
         if not GEMINI_AVAILABLE:
             raise ImportError("google-generativeai package is required but not available")
             
-        # Configure Gemini API
+
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel("gemini-pro")  # Changed to gemini-pro as it's more widely available
+        self.model = genai.GenerativeModel("gemini-pro")  
         print("Initialized Gemini model successfully")
 
     def clean_response(self, response: str) -> str:
-        """Clean the response"""
         try:
-            # Clean up extra whitespace and newlines
             response = re.sub(r'\s+', ' ', response)
             response = response.strip()
-            
             return response
             
         except Exception as e:
@@ -45,7 +42,6 @@ class ResponseGenerator:
             if not contexts:
                 return "Please provide some context to answer the question."
             
-            # Format contexts
             formatted_contexts = []
             for i, ctx in enumerate(contexts, 1):
                 clean_ctx = ctx.strip().replace("\n", " ")
@@ -54,7 +50,6 @@ class ResponseGenerator:
             
             context_text = "\n\n".join(formatted_contexts)
             
-            # Create prompt
             prompt = f"""Based on the following context, provide a clear and concise answer to the question.
 
 {context_text}
@@ -64,25 +59,23 @@ Question: {question}
 Answer: """
             
             try:
-                # Generate response using Gemini
                 response = self.model.generate_content(prompt)
                 
                 if response.text:
                     return self.clean_response(response.text)
-                else:
-                    # If response is empty, try with a more detailed prompt
-                    detailed_prompt = f"""Using the provided context, explain in detail:
+                #else:
+                 #   detailed_prompt = f"""Using the provided context, explain in detail:
                     
-{context_text}
+#{context_text}
 
-Question: {question}
+#Question: {question}
 
-Please cover:
-1. Main concepts
-2. Key points
-3. Relevant details
+#Please cover:
+#1. Main concepts
+#2. Key points
+#3. Relevant details
 
-Answer: """
+#Answer: """
                     
                     response = self.model.generate_content(detailed_prompt)
                     return self.clean_response(response.text)
