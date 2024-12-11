@@ -47,13 +47,12 @@ class PDFProcessor:
     def process_pdf(self, pdf_path):
         pages_text = self.open_read_pdf(pdf_path)
 
-        # Tokenize sentences
+        
         for item in tqdm(pages_text):
             doc = self.nlp(item["text"])
             item["sentences"] = list(doc.sents)
             item["sentence_count"] = [str(sentence) for sentence in item["sentences"]]
 
-        # Split sentences into chunks
         for item in tqdm(pages_text):
             item["sentence_chunks"] = self.split_list(
                 input_list=item["sentences"],
@@ -61,18 +60,15 @@ class PDFProcessor:
             )
             item["num_chunks"] = len(item["sentence_chunks"])
 
-        # Process chunks
         pages_and_chunks = []
         for item in tqdm(pages_text):
             for sentence_chunk in item["sentence_chunks"]:
                 chunk_dict = {}
                 
-                # Convert Span objects to strings before joining
                 joined_sentence_chunk = "".join(str(sentence) for sentence in sentence_chunk).replace("  ", " ").strip()
                 joined_sentence_chunk = re.sub(r'\.([A-Z])', r'. \1', joined_sentence_chunk) 
                 chunk_dict["sentence_chunk"] = joined_sentence_chunk
                 
-                # Get chunk stats
                 chunk_dict["chunk_char_count"] = len(joined_sentence_chunk)
                 chunk_dict["chunk_word_count"] = len([word for word in joined_sentence_chunk.split(" ")])
                 chunk_dict["chunk_token_count"] = len(joined_sentence_chunk) / 4 
