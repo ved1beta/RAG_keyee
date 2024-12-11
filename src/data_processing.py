@@ -13,22 +13,17 @@ class PDFProcessor:
         self.num_sentence_chunk_size = num_sentence_chunk_size
 
     def text_formatter(self, text: str) -> str:
-        """
-        Format the text extracted from PDF files.
-        """
+      
         text_clean = text.replace("\n", " ").strip()
         return text_clean
 
     def open_read_pdf(self, pdf_path):
-        """
-        Read PDF and extract text pages.
-        """
-        # Validate PDF path
+  
         if not os.path.exists(pdf_path):
             raise FileNotFoundError(f"PDF file not found at: {pdf_path}")
             
-        if not pdf_path.lower().endswith('.pdf'):
-            raise ValueError("File must be a PDF")
+        #if not pdf_path.lower().endswith('.pdf'):
+         #   raise ValueError("File must be a PDF")
             
         try:
             doc = fitz.open(pdf_path)
@@ -47,16 +42,9 @@ class PDFProcessor:
             raise Exception(f"Error reading PDF: {str(e)}")
 
     def split_list(self, input_list: list, slice_size: int) -> list[list[str]]:
-        """
-        Splits the input_list into sublists of size slice_size.
-        """
         return [input_list[i:i + slice_size] for i in range(0, len(input_list), slice_size)]
 
     def process_pdf(self, pdf_path):
-        """
-        Main method to process PDF and return processed chunks.
-        """
-        # Read PDF pages
         pages_text = self.open_read_pdf(pdf_path)
 
         # Tokenize sentences
