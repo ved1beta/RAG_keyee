@@ -28,30 +28,25 @@ class SemanticRetriever:
         """
         if not isinstance(query_embedding, torch.Tensor):
             raise ValueError("query_embedding must be a torch.Tensor")
-            
-        start_time = timer()
         
         try:
-            # Calculate similarity scores based on metric
             if self.similarity_metric == 'dot':
                 scores = util.dot_score(query_embedding, self.embeddings)[0]
-            elif self.similarity_metric == 'cosine':
-                scores = F.cosine_similarity(
-                    query_embedding.unsqueeze(0), 
-                    self.embeddings, 
-                    dim=1
-                )
+            #elif self.similarity_metric == 'cosine':
+              #  scores = F.cosine_similarity(
+              #    query_embedding.unsqueeze(0), 
+              #    self.embeddings, 
+              #   dim=1)
+                
             else:
                 raise ValueError(f"Unsupported similarity metric: {self.similarity_metric}")
                 
-            # Get top results
             top_results = torch.topk(scores, k=min(top_k, len(self.embeddings)))
             
-            # Get indices and scores
-            top_indices = top_results.indices.cpu().numpy()
-            top_scores = top_results.values.cpu().numpy()
+
+            top_indices = top_results.indices.cuda().numpy()
+            top_scores = top_results.values.cuda().numpy()
             
-            # Build retrieved contexts
             retrieved_contexts = []
             filtered_count = 0
             
@@ -66,21 +61,19 @@ class SemanticRetriever:
                 else:
                     filtered_count += 1
             
-            end_time = timer()
-            print(f"Retrieval time: {end_time - start_time:.5f} seconds")
+            
             print(f"Found {len(retrieved_contexts)} contexts above threshold {self.min_score_threshold}")
             if filtered_count > 0:
                 print(f"Filtered out {filtered_count} results below threshold")
             
-            # If no results above threshold, return top result anyway
-            if not retrieved_contexts and len(top_scores) > 0:
-                context = self.chunks_data[top_indices[0]]
-                retrieved_contexts.append({
-                    'text': context['sentence_chunk'],
-                    'similarity_score': float(top_scores[0]),
-                    'page_number': context.get('page_num', None)
-                })
-                print("Returning top result despite being below threshold")
+            #if not retrieved_contexts and len(top_scores) > 0:
+            #   context = self.chunks_data[top_indices[0]]
+            #   retrieved_contexts.append({
+            #       'text': context['sentence_chunk'],
+            #      'similarity_score': float(top_scores[0]),
+            #       'page_number': context.get('page_num', None)
+            #  })
+            # print("Returning top result despite being below threshold")
             
             return retrieved_contexts
             
