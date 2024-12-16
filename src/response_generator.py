@@ -14,22 +14,26 @@ except ImportError:
         print(f"Error installing google-generativeai: {str(e)}")
         GEMINI_AVAILABLE = False
 
+import os
 import re
+
+
+
 
 class ResponseGenerator:
     def __init__(self, api_key="AIzaSyCMJN_HqVPaHUEKeR_FfKxNwXhHcKXf-oE"):
         if not GEMINI_AVAILABLE:
             raise ImportError("google-generativeai package is required but not available")
             
-        # Configure Gemini API
+    
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel("gemini-pro")  # Changed to gemini-pro as it's more widely available
+        self.model = genai.GenerativeModel("gemini-pro")
         print("Initialized Gemini model successfully")
+        
 
     def clean_response(self, response: str) -> str:
         """Clean the response"""
         try:
-            # Clean up extra whitespace and newlines
             response = re.sub(r'\s+', ' ', response)
             response = response.strip()
             
@@ -54,7 +58,6 @@ class ResponseGenerator:
             
             context_text = "\n\n".join(formatted_contexts)
             
-            # Create prompt
             prompt = f"""Based on the following context, provide a clear and concise answer to the question.
 
 {context_text}
