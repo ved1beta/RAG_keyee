@@ -7,14 +7,13 @@ spacy==3.7.4
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1.tar.gz
 
 # Data Processing
-pandas==2.1.4
-numpy==1.24.4
-tqdm==4.66.1
+pandas
+numpy
+tqdm
 
 # NLP
-scikit-learn==1.3.2
-nltk==3.8.1
-
+scikit-learn
+nltk
 # Optional but recommended
 torch==2.1.2
 transformers==4.36.2
