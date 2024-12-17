@@ -1,5 +1,5 @@
 
-python==3.11.6
+
 
 # PDF Processing
 PyMuPDF==1.23.3
