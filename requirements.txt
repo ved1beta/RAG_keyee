@@ -1,5 +1,4 @@
-# Core
-streamlit==1.28.0
+
 python==3.11.6
 
 # PDF Processing
