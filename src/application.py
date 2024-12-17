@@ -166,4 +166,5 @@ if __name__ == '__main__':
     if not os.path.exists(template_path):
         raise FileNotFoundError(f"Template not found at: {template_path}")
         
-    app.run(debug=True, port=5000)
+    
+    app.run(host='0.0.0.0', port=5000, debug=True)
