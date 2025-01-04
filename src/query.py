@@ -12,9 +12,10 @@ class QueryProcessor:
                  device=None,
                  similarity_metric='dot',
                  min_score_threshold=0.1):
-        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        # Automatically choose device if not specified
+        self.device = device if device is not None else ("cuda" if torch.cuda.is_available() else "cpu")
+        print(f"Using device: {self.device}")
         
- 
         self.text_chunks_and_embedding_df = self._load_embeddings(embeddings_path)
         print(f"Loaded {len(self.text_chunks_and_embedding_df)} text chunks")
         
@@ -31,12 +32,11 @@ class QueryProcessor:
             device=self.device
         )
         
-       
         self.retriever = SemanticRetriever(
             embeddings=self.embeddings,
             chunks_data=self.pages_and_chunks,
             similarity_metric=similarity_metric,
-            min_score_threshold=min_score_threshold
+            min_score_threshold=min_score_threshold,
         )
 
     def _load_embeddings(self, embeddings_path):
@@ -52,8 +52,9 @@ class QueryProcessor:
     def process_query(self, query, k=5):
         """Process a query and return relevant contexts"""
         try:
-          
             query_embedding = self.encode_query(query)
+            if self.device == "cuda":
+                query_embedding = query_embedding.cuda()
             
             retrieved_contexts = self.retriever.retrieve(
                 query_embedding=query_embedding,

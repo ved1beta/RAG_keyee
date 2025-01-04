@@ -1,14 +1,17 @@
 import torch
-import numpy as np
+import numpy as n
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 import json
 
 class EmbeddingGenerator:
-    def __init__(self, model_name="all-mpnet-base-v2", device="cuda"):
-        self.embedding_model = SentenceTransformer(model_name_or_path=model_name, device=device)
-        self.device = torch.device(device if torch.cuda.is_available() else "cpu")
+    def __init__(self, model_name="all-mpnet-base-v2", device=None):
+        # Automatically choose device
+        self.device ="cuda" 
+        print(f"Using device: {self.device}")
+        
+        self.embedding_model = SentenceTransformer(model_name_or_path=model_name, device=self.device)
 
     def generate_embeddings(self, df, min_token_len=5, batch_size=32):
         pages_and_chunks_over_min_token_len = df[df["chunk_token_count"] > min_token_len].to_dict(orient="records")
@@ -22,7 +25,6 @@ class EmbeddingGenerator:
         return text_chunks_and_embeddings_df
 
     def save_embeddings(self, embeddings_df, save_path):
-    
         embeddings_df['embedding'] = embeddings_df['embedding'].apply(lambda x: x.tolist())
        
         if save_path.endswith('.csv'):

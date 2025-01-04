@@ -1,30 +1,18 @@
-try:
-    import google.generativeai as genai
-    GEMINI_AVAILABLE = True
-except ImportError:
-    print("Warning: google-generativeai package not found. Installing...")
-    import subprocess
-    import sys
-    
-    try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "google-generativeai"])
-        import google.generativeai as genai
-        GEMINI_AVAILABLE = True
-    except Exception as e:
-        print(f"Error installing google-generativeai: {str(e)}")
-        GEMINI_AVAILABLE = False
-
+import os
+from groq import Groq
 import re
 
 class ResponseGenerator:
-    def __init__(self, api_key="AIzaSyCMJN_HqVPaHUEKeR_FfKxNwXhHcKXf-oE"):
-        if not GEMINI_AVAILABLE:
-            raise ImportError("google-generativeai package is required but not available")
+    def __init__(self, api_key=None):
+        if api_key is None:
+            api_key = "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"
+        
+        if not api_key:
+            raise ValueError("Groq API key is required")
             
-
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel("gemini-pro")  
-        print("Initialized Gemini model successfully")
+        self.client = Groq(api_key=api_key)
+        self.model = "llama-3.3-70b-versatile"  # Default model
+        print("Initialized Groq client successfully")
 
     def clean_response(self, response: str) -> str:
         try:
@@ -39,6 +27,11 @@ class ResponseGenerator:
     def get_answer(self, question: str, contexts: list = None) -> str:
         """Get answer for a question using provided contexts"""
         try:
+            print("Debug - Received contexts:", contexts)
+            print("Debug - Context type:", type(contexts))
+            if contexts:
+                print("Debug - First context type:", type(contexts[0]))
+                
             if not contexts:
                 return "Please provide some context to answer the question."
             
@@ -59,29 +52,48 @@ Question: {question}
 Answer: """
             
             try:
-                response = self.model.generate_content(prompt)
+                chat_completion = self.client.chat.completions.create(
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": prompt
+                        }
+                    ],
+                    model=self.model
+                )
                 
-                if response.text:
-                    return self.clean_response(response.text)
-                #else:
-                 #   detailed_prompt = f"""Using the provided context, explain in detail:
+                response = chat_completion.choices[0].message.content
+                
+                if response:
+                    return self.clean_response(response)
+                else:
+                    detailed_prompt = f"""Using the provided context, explain in detail:
                     
-#{context_text}
+{context_text}
 
-#Question: {question}
+Question: {question}
 
-#Please cover:
-#1. Main concepts
-#2. Key points
-#3. Relevant details
+Please cover:
+1. Main concepts
+2. Key points
+3. Relevant details
 
-#Answer: """
+Answer: """
                     
-                    response = self.model.generate_content(detailed_prompt)
-                    return self.clean_response(response.text)
+                    chat_completion = self.client.chat.completions.create(
+                        messages=[
+                            {
+                                "role": "user",
+                                "content": detailed_prompt
+                            }
+                        ],
+                        model=self.model
+                    )
+                    response = chat_completion.choices[0].message.content
+                    return self.clean_response(response)
                     
             except Exception as e:
-                print(f"Error with Gemini API: {str(e)}")
+                print(f"Error with Groq API: {str(e)}")
                 return f"Error generating response: {str(e)}"
             
         except Exception as e:
@@ -92,5 +104,5 @@ Answer: """
         """
         Clean up resources when the object is deleted
         """
-        if hasattr(self, 'model'):
-            del self.model
+        if hasattr(self, 'client'):
+            del self.client
